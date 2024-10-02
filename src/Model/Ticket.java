@@ -1,22 +1,30 @@
+package Model;
+
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.text.DecimalFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.chrono.ChronoLocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.format.FormatStyle;
 
 public class Ticket {
     private static int ticketsCounter = 1;
-    private static final SimpleDateFormat DateAndTimeFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm");
-    private static final SimpleDateFormat TimeFormat = new SimpleDateFormat("HH:mm");
-    private static final DecimalFormat formatter = new DecimalFormat("$#,##0.00");
+    private final LocalDateTime ticketCreationTime = LocalDateTime.now();
+    static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd 'at' hh:mm a");
+
+    private static final SimpleDateFormat TIME_FORMAT = new SimpleDateFormat("HH:mm");
+    private static final DecimalFormat FORMATTER = new DecimalFormat("$#,##0.00");
 
     private int ticketId = 0;
-    private Timestamp ticketCreationTime;
-    private String concertHall;
+    private ConcertHall concertHall;
     private int eventCode;
     private Timestamp eventTime;
     private boolean isPromo;
-    private char stadiumSector;
+    private StadiumSector stadiumSector;
     private double backpackAllowedWeight;
     private BigDecimal price;
 
@@ -28,29 +36,19 @@ public class Ticket {
         this.ticketId = ticketId;
     }
 
-    public Timestamp getTicketCreationTime() {
+    public LocalDateTime getTicketCreationTime() {
         return ticketCreationTime;
     }
 
-    public void setTicketCreationTime() {
-        this.ticketCreationTime = new Timestamp(System.currentTimeMillis());
-    }
-
-    public String getConcertHall() {
+    public ConcertHall getConcertHall() {
         return concertHall;
     }
 
-    public void setConcertHall(String concertHall) {
-        if (concertHall.length() > 10 ) {
-            System.out.println("Invalid concert hall name.");
-            System.exit(0);
-        }
+    public void setConcertHall(ConcertHall concertHall) {
         this.concertHall = concertHall;
     }
 
-    public void setUnnamedConcertHall() {
-        this.concertHall = "-";
-    }
+
 
     public int getEventCode() {
         return eventCode;
@@ -72,13 +70,13 @@ public class Ticket {
         return eventTime;
     }
 
-    public void setEventTime(String eventTime) {
-        try {
-            java.util.Date parsedDate = TimeFormat.parse(eventTime);
-            this.eventTime = new Timestamp(parsedDate.getTime());
-        }
-        catch (ParseException e) {
-            e.printStackTrace();
+    public void setEventTime(LocalDateTime eventTime) {
+        if (eventTime != null) {
+            if (eventTime.isBefore(ticketCreationTime)) {
+                System.out.println("Invalid event time.");
+                System.exit(0);
+            }
+            this.eventTime = Timestamp.valueOf(eventTime);
         }
     }
 
@@ -90,22 +88,19 @@ public class Ticket {
         isPromo = promo;
     }
 
-    public char getStadiumSector() {
+    public StadiumSector getStadiumSector() {
         return stadiumSector;
     }
 
-    public void setStadiumSector(char stadiumSector) {
-        if (stadiumSector != 'A' & stadiumSector != 'B' & stadiumSector != 'C') {
-            System.out.println("Invalid stadium sector");
-            System.exit(0);
-        }
+    public void setStadiumSector(StadiumSector stadiumSector) {
+
         this.stadiumSector = stadiumSector;
     }
 
-    public void setUnnamedStadiumSector() {
+ /*   public void setUnnamedStadiumSector() {
         this.stadiumSector = '-';
     }
-
+*/
     public double getbackpackAllowedWeight() {
         return backpackAllowedWeight;
     }
@@ -119,7 +114,7 @@ public class Ticket {
     }
 
     public String getPrice() {
-        return formatter.format(this.price);
+        return FORMATTER.format(this.price);
     }
 
     public void setPrice(Integer price) {
@@ -134,32 +129,16 @@ public class Ticket {
     }
 
     public Ticket() {
-        ticketId = ticketsCounter;
-        ticketsCounter++;
-        setTicketCreationTime();
-        setUnnamedConcertHall();
-        setPromo(false);
-        setUnnamedStadiumSector();
-        setbackpackAllowedWeight(0);
+        this(ConcertHall.not_specified, 3, null, false, StadiumSector.not_specified, 0); // How to create a Ticket without Event Time, not using "null"??
     }
 
-    public Ticket(String concertHall, int eventCode, String eventTime) {
-        ticketId = ticketsCounter;
-        ticketsCounter++;
-        setTicketCreationTime();
-        setPromo(false);
-        setUnnamedStadiumSector();
-        setbackpackAllowedWeight(0);
-
-        setConcertHall(concertHall);
-        setEventCode(eventCode);
-        setEventTime(eventTime);
+    public Ticket(ConcertHall concertHall, int eventCode, LocalDateTime eventTime) {
+        this(concertHall, eventCode, eventTime, false, StadiumSector.not_specified, 0);
     }
 
-    public Ticket(String concertHall, int eventCode, String eventTime, boolean isPromo, char stadiumSector, double backpackAllowedWeight) {
+    public Ticket(ConcertHall concertHall, int eventCode, LocalDateTime eventTime, boolean isPromo, StadiumSector stadiumSector, double backpackAllowedWeight) {
         ticketId = ticketsCounter;
         ticketsCounter++;
-        setTicketCreationTime();
 
         setConcertHall(concertHall);
         setEventCode(eventCode);
@@ -171,13 +150,14 @@ public class Ticket {
     
     public void printTicket() {
         System.out.println("----------------");
-        System.out.println("Ticket ID: " + getTicketId());
-        System.out.println("Ticket created: " + DateAndTimeFormat.format(getTicketCreationTime()));
+        System.out.println("Model.Ticket ID: " + getTicketId());
+        System.out.println("Model.Ticket created: " + DATE_TIME_FORMATTER.format(ticketCreationTime));
+
         System.out.println("Concert Hall: " + getConcertHall());
         System.out.println("Event Code: " + getEventCode());
 
         if (eventTime != null) {
-            System.out.println("Event Time: " + TimeFormat.format(getEventTime()));
+            System.out.println("Event Time: " + TIME_FORMAT.format(getEventTime()));
         }
         else {
             System.out.println("Event Time: -");
